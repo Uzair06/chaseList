@@ -32,7 +32,7 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
 async function start() {
   if (!config.mongoUri) throw new Error('MONGODB_URI is required. Add your MongoDB Atlas connection string to server/.env.')
   await mongoose.connect(config.mongoUri)
-  app.listen(config.port, () => console.log(`ChaseList API listening on port ${config.port}`))
+  app.listen(config.port, '0.0.0.0', () => console.log(`ChaseList API listening on port ${config.port}`))
 }
 
 start().catch((error: unknown) => {

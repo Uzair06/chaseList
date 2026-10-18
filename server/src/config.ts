@@ -19,3 +19,20 @@ export const config = {
 }
 
 export const isProduction = config.nodeEnv === 'production'
+
+if (isProduction) {
+  let clientOrigin: URL
+  let clientUrl: URL
+  try {
+    clientOrigin = new URL(config.clientOrigin)
+    clientUrl = new URL(config.clientUrl)
+  } catch {
+    throw new Error('Production CLIENT_ORIGIN and CLIENT_URL must be valid HTTPS origins.')
+  }
+  if (clientOrigin.protocol !== 'https:' || clientOrigin.origin !== config.clientOrigin) {
+    throw new Error('Production CLIENT_ORIGIN must be the exact HTTPS frontend origin, without a trailing slash.')
+  }
+  if (clientUrl.protocol !== 'https:' || clientUrl.pathname !== '/' || clientUrl.search || clientUrl.hash || clientUrl.origin !== clientOrigin.origin) {
+    throw new Error('Production CLIENT_URL must be the same HTTPS origin as CLIENT_ORIGIN, without a path.')
+  }
+}

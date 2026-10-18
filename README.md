@@ -43,6 +43,8 @@ npm run dev
 
 Open the Vite URL shown in the client terminal (normally `http://localhost:5173`). Vite proxies `/api` requests to `http://localhost:4000`.
 
+For frontend development, `VITE_API_URL` may be left blank to use that Vite proxy. The client appends `/api` to the configured backend origin, so do not include `/api` in `VITE_API_URL`.
+
 Production builds:
 
 ```bash
@@ -51,6 +53,53 @@ cd ../client && npm run build
 ```
 
 The API is started with `npm start` from `server/` after building. Deploy the React static build and API behind HTTPS, and set the production environment variables in the hosting provider's secret/environment settings—not in source control.
+
+## Production deployment settings (not deployed from this repository)
+
+### Render API service
+
+Create a **Web Service** with:
+
+- Root directory: `server`
+- Runtime: Node
+- Node version: 20.19+ (or 22.12+)
+- Build command: `npm ci && npm run build`
+- Start command: `npm start`
+- Health check path: `/api/health`
+
+In Atlas Network Access, allow the Render service's outbound IP addresses (or use an approved private networking option). Do not assume the developer machine's IP allowlist entry also covers Render.
+
+Set these in the Render service environment (never commit them):
+
+- `NODE_ENV=production`
+- `MONGODB_URI` — Atlas connection string
+- `JWT_SECRET` — at least 32 random characters
+- `AWS_REGION` and `S3_BUCKET`
+- `CLIENT_ORIGIN` — the exact deployed frontend HTTPS origin, with no trailing slash
+- `CLIENT_URL` — the same frontend origin, with no path
+- `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` only if Render is not using an AWS IAM credential provider
+
+Leave `S3_ENDPOINT` unset for AWS S3. Render supplies `PORT`; the API already reads it. Configure the S3 bucket's public-access block and IAM policy separately in AWS.
+
+### Vercel frontend
+
+Import this repository into Vercel and set:
+
+- Root directory: `client`
+- Framework preset: Vite
+- Node.js version: 22.x
+- Install command: `npm ci`
+- Build command: `npm run build`
+- Output directory: `dist`
+- Environment variable: `VITE_API_URL` = the API **origin only** (for example, `https://api.example.com`; ChaseList appends `/api`)
+
+`client/vercel.json` supplies the React Router SPA fallback. Set `VITE_API_URL` for the Production environment and redeploy the frontend after changing it; Vite embeds this value at build time.
+
+The API uses credentialed CORS and an exact `CLIENT_ORIGIN` allowlist. The session is an HttpOnly cookie with `SameSite=None; Secure` in production. For reliable browser cookie behavior, use a shared custom site such as `app.example.com` on Vercel and `api.example.com` on Render. The default `*.vercel.app` and `*.onrender.com` hosts are cross-site, and browsers may block their cookies as third-party cookies. Point `CLIENT_ORIGIN` and `CLIENT_URL` at the canonical frontend origin; Vercel preview origins are not automatically allowed.
+
+### Resend status
+
+Resend is not integrated in the current MVP. Reminders still open the bookkeeper's email app; the app does not send email. `RESEND_API_KEY` by itself is unused. If automatic email is added later, configure a verified sender (for example `RESEND_FROM_EMAIL`) as well as the API key, and implement/test the sending flow before claiming it works.
 
 ## MVP workflows
 
@@ -69,6 +118,7 @@ There is no seeded client data. The marketing-page dashboard image is clearly la
 - Files are validated by MIME type and file signature, capped at 20 MB per file and 10 files per checklist item, uploaded server-side to private S3, encrypted at rest with S3 SSE-S3, and never served from a public URL. Bookkeepers get short-lived signed downloads.
 - The API uses input validation, rate limits for auth/public-link routes, security headers, secure cookie settings, and an Origin check for authenticated mutations.
 - Request creation and reminders are manual. The reminder action opens a prefilled email in the bookkeeper's email app; there is no automatic email delivery or monthly scheduler.
+- Client upload links expire after 30 days; creating a reminder rotates the token and resets that expiry. Signed file-download URLs expire after 60 seconds.
 - Stripe, SMS, Google Drive, and AI document classification are not included.
 
 ## Useful commands
