@@ -63,7 +63,7 @@ Create a **Web Service** with:
 - Root directory: `server`
 - Runtime: Node
 - Node version: 20.19+ (or 22.12+)
-- Build command: `npm ci && npm run build`
+- Build command: `npm ci --include=dev && npm run build`
 - Start command: `npm start`
 - Health check path: `/api/health`
 
@@ -80,6 +80,8 @@ Set these in the Render service environment (never commit them):
 - `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` only if Render is not using an AWS IAM credential provider
 
 Leave `S3_ENDPOINT` unset for AWS S3. Render supplies `PORT`; the API already reads it. Configure the S3 bucket's public-access block and IAM policy separately in AWS.
+
+`render.yaml` contains these settings for a Render Blueprint. For the existing Render service, update its Dashboard **Build Command** to the command above; changing this repository file alone does not change a service configured only in the Dashboard. `--include=dev` ensures `@types/node` and TypeScript are installed for the build even when Render sets `NODE_ENV=production`.
 
 ### Vercel frontend
 
